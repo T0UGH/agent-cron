@@ -1,0 +1,43 @@
+{
+  "name": "agent-cron",
+  "version": "0.1.0",
+  "description": "Run Claude Agent SDK tasks on a cron schedule. Tasks are defined as .md files.",
+  "type": "module",
+  "main": "dist/cli.js",
+  "bin": {
+    "agent-cron": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "node --import tsx/esm src/cli.ts",
+    "list": "node --import tsx/esm src/cli.ts list",
+    "start": "node --import tsx/esm src/cli.ts start"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "latest",
+    "@octokit/rest": "^21.0.0",
+    "dotenv": "^16.0.0",
+    "gray-matter": "^4.0.3",
+    "node-cron": "^3.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/node-cron": "^3.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "files": [
+    "dist/"
+  ],
+  "keywords": [
+    "agent",
+    "cron",
+    "claude",
+    "ai",
+    "scheduler"
+  ],
+  "license": "MIT"
+}
