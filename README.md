@@ -10,6 +10,22 @@ npm install -g @t0u9h/agent-cron
 npx @t0u9h/agent-cron list
 ```
 
+## Claude Code Skill
+
+Install the skill to manage agent-cron tasks via natural language in Claude Code:
+
+```bash
+/claude install marketplace https://github.com/T0UGH/agent-cron/raw/main/.claude-plugin/marketplace.json
+```
+
+Once installed, you can:
+- **Create a task:** "帮我创建一个每天早9点搜 AI 新闻发飞书的任务"
+- **List tasks:** "列出所有定时任务"
+- **Run a task:** "立即运行 daily-ai-news"
+- **Setup auto-start:** "帮我配置 agent-cron 开机自启"
+
+The skill automatically configures macOS auto-start (via launchd) when you create your first task.
+
 ## Usage
 
 ```bash
