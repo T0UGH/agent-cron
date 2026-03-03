@@ -1,0 +1,14 @@
+{
+  "name": "agent-cron",
+  "description": "Claude Code skill for managing agent-cron scheduled tasks",
+  "owner": { "name": "T0UGH", "email": "tough.neu.edu@gmail.com" },
+  "plugins": [
+    {
+      "name": "agent-cron",
+      "description": "Claude Code skill for managing agent-cron scheduled tasks",
+      "version": "0.1.0",
+      "source": "./",
+      "author": { "name": "T0UGH", "email": "tough.neu.edu@gmail.com" }
+    }
+  ]
+}
