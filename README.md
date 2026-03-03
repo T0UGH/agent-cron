@@ -5,9 +5,9 @@ Run Claude Agent SDK tasks on a cron schedule. Tasks are defined as `.md` files 
 ## Install
 
 ```bash
-npm install -g agent-cron
+npm install -g @t0u9h/agent-cron
 # or use npx
-npx agent-cron list
+npx @t0u9h/agent-cron list
 ```
 
 ## Usage
