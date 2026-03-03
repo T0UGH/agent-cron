@@ -11,7 +11,8 @@
     "build": "tsc",
     "dev": "node --import tsx/esm src/cli.ts",
     "list": "node --import tsx/esm src/cli.ts list",
-    "start": "node --import tsx/esm src/cli.ts start"
+    "start": "node --import tsx/esm src/cli.ts start",
+    "test": "node --import tsx/esm --test tests/**/*.test.ts"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "latest",

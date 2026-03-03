@@ -32,7 +32,7 @@ function parseInline(raw: string): FeishuInlineElement[] {
   return elements.length > 0 ? elements : [{ tag: 'text', text: raw }];
 }
 
-function markdownToFeishuPost(markdown: string): { title: string; content: FeishuLine[] } {
+export function markdownToFeishuPost(markdown: string): { title: string; content: FeishuLine[] } {
   const lines = markdown.split('\n');
   let title = '';
   const content: FeishuLine[] = [];
