@@ -1,6 +1,6 @@
 {
   "name": "@t0u9h/agent-cron",
-  "version": "0.1.0",
+  "version": "0.1.5",
   "description": "Run Claude Agent SDK tasks on a cron schedule. Tasks are defined as .md files.",
   "type": "module",
   "main": "dist/cli.js",
