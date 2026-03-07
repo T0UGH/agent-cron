@@ -3,6 +3,7 @@ import 'dotenv/config';
 import path from 'path';
 import { loadTasks } from './loader.js';
 import { startScheduler, runNow, listTasks } from './scheduler.js';
+import { statusAll, logsFor } from './status.js';
 
 const args = process.argv.slice(2);
 const command = args[0];
@@ -31,6 +32,20 @@ switch (command) {
     listTasks(tasks);
     break;
 
+  case 'status':
+    statusAll(tasks);
+    break;
+
+  case 'logs': {
+    const slug = args[1];
+    if (!slug) {
+      console.error('Usage: agent-cron logs <slug> [date]');
+      process.exit(1);
+    }
+    logsFor(slug, args[2]);
+    break;
+  }
+
   default:
     console.log(`
 agent-cron — run Claude Agent SDK tasks on a cron schedule
@@ -40,6 +55,8 @@ Usage:
   agent-cron start ./my-tasks   Specify tasks directory
   agent-cron run [slug]         Run all tasks or one by slug immediately
   agent-cron list               List all registered tasks
+  agent-cron status             Show last run status for all tasks
+  agent-cron logs <slug> [date] Show logs for a task (date: YYYY-MM-DD, default: today)
 
 Options:
   dir     Path to tasks directory (default: ./tasks)
