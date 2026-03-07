@@ -4,7 +4,7 @@ export interface Task {
   cron: string           // cron expression
   output: string         // channel name: 'file' | 'github' | 'feishu' | ...
   agent?: string         // agent runner name, default 'claude'
-  skills?: boolean       // load ~/.claude/ skills via settingSources, default true
+  skills?: boolean | string[]  // false = no skills; string[] = load specific skills by name; true/omit = load all user skills
   prompt: string         // prompt template body, {date} substituted at runtime
   [key: string]: unknown // channel-specific config (feishuWebhook, githubRepo, etc.)
 }

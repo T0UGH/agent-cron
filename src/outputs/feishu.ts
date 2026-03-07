@@ -1,7 +1,7 @@
 import type { OutputChannel, Task } from '../types.js';
 
 type FeishuInlineElement =
-  | { tag: 'text'; text: string; style?: string[] }
+  | { tag: 'text'; text: string }
   | { tag: 'a'; text: string; href: string };
 
 type FeishuLine = FeishuInlineElement[];
@@ -20,7 +20,7 @@ function parseInline(raw: string): FeishuInlineElement[] {
     if (m[1] && m[2]) {
       elements.push({ tag: 'a', text: m[1], href: m[2] });
     } else if (m[3]) {
-      elements.push({ tag: 'text', text: m[3], style: ['bold'] });
+      elements.push({ tag: 'text', text: `「${m[3]}」` });
     }
     last = re.lastIndex;
   }
@@ -46,10 +46,10 @@ export function markdownToFeishuPost(markdown: string): { title: string; content
       continue;
     }
 
-    // h2/h3 → bold line
+    // h2/h3 → prefix with ▌
     if (/^#{2,3}\s+/.test(line)) {
-      const text = line.replace(/^#{2,3}\s+/, '');
-      content.push([{ tag: 'text', text, style: ['bold'] }]);
+      const text = '▌ ' + line.replace(/^#{2,3}\s+/, '');
+      content.push([{ tag: 'text', text }]);
       continue;
     }
 
