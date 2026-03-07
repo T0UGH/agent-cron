@@ -51,7 +51,6 @@ export function listTasks(tasks: Task[]): void {
     console.log(`  ${task.slug}`);
     console.log(`    name:   ${task.name}`);
     console.log(`    cron:   ${task.cron}`);
-    console.log(`    output: ${task.output}`);
     console.log('');
   }
 }

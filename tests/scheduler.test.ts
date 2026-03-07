@@ -2,15 +2,13 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { listTasks, runNow } from '../src/scheduler.js';
 import { runners } from '../src/agents/index.js';
-import { channels } from '../src/outputs/index.js';
-import type { Task, AgentRunner, OutputChannel } from '../src/types.js';
+import type { Task, AgentRunner } from '../src/types.js';
 
 function makeTask(slug: string, overrides: Partial<Task> = {}): Task {
   return {
     slug,
     name: `Task ${slug}`,
     cron: '0 9 * * *',
-    output: 'file',
     prompt: 'test',
     ...overrides,
   };
@@ -32,10 +30,10 @@ function captureConsole(): { messages: string[]; restore: () => void } {
 }
 
 describe('listTasks', () => {
-  test('prints each task slug, name, cron, output', () => {
+  test('prints each task slug, name, cron', () => {
     const tasks = [
-      makeTask('alpha', { name: 'Alpha Task', cron: '0 8 * * *', output: 'feishu' }),
-      makeTask('beta', { name: 'Beta Task', cron: '0 9 * * *', output: 'github' }),
+      makeTask('alpha', { name: 'Alpha Task', cron: '0 8 * * *' }),
+      makeTask('beta', { name: 'Beta Task', cron: '0 9 * * *' }),
     ];
 
     const cap = captureConsole();
@@ -46,11 +44,9 @@ describe('listTasks', () => {
     assert.ok(all.includes('alpha'));
     assert.ok(all.includes('Alpha Task'));
     assert.ok(all.includes('0 8 * * *'));
-    assert.ok(all.includes('feishu'));
     assert.ok(all.includes('beta'));
     assert.ok(all.includes('Beta Task'));
     assert.ok(all.includes('0 9 * * *'));
-    assert.ok(all.includes('github'));
   });
 
   test('prints message when no tasks', () => {
@@ -126,22 +122,5 @@ describe('runNow', () => {
     process.exit = origExit;
 
     assert.equal(exitCode, 1);
-  });
-
-  test('passes result to output channel for real content', async () => {
-    let sentResult = '';
-
-    (runners as Record<string, AgentRunner>)['claude'] = {
-      async run() { return '# Report'; },
-    };
-    (channels as Record<string, OutputChannel>)['file'] = {
-      async send(result) { sentResult = result; },
-    };
-
-    const cap = captureConsole();
-    await runNow([makeTask('report-task', { output: 'file' })]);
-    cap.restore();
-
-    assert.equal(sentResult, '# Report');
   });
 });

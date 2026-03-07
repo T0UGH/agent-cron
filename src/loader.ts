@@ -23,20 +23,14 @@ export function loadTasks(dir: string): Task[] {
         return null;
       }
 
-      if (!data.output) {
-        console.warn(`[agent-cron] task "${slug}" missing required field: output, skipping`);
-        return null;
-      }
-
       const task: Task = {
         slug,
         name: String(data.name ?? slug),
         cron: String(data.cron),
-        output: String(data.output),
         prompt: content.trim(),
-        // spread all other frontmatter fields (channel-specific config)
+        // spread all other frontmatter fields (agent, skills, and any extra config)
         ...Object.fromEntries(
-          Object.entries(data).filter(([k]) => !['name', 'cron', 'output'].includes(k))
+          Object.entries(data).filter(([k]) => !['name', 'cron'].includes(k))
         ),
       };
 
