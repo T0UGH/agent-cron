@@ -61,14 +61,15 @@ export class ClaudeRunner implements AgentRunner {
       });
 
       for await (const message of q) {
-        if (message.type === 'tool_use') {
-          logger?.tool(String(message.name ?? ''), message.input);
+        const msg = message as any;
+        if (msg.type === 'tool_use') {
+          logger?.tool(String(msg.name ?? ''), msg.input);
         }
-        if (message.type === 'tool_result') {
-          const outputText = Array.isArray(message.content)
-            ? (message.content as any[]).filter((c) => c.type === 'text').map((c) => c.text).join('')
-            : String(message.content ?? '');
-          logger?.tool('(result)', { id: message.tool_use_id }, outputText);
+        if (msg.type === 'tool_result') {
+          const outputText = Array.isArray(msg.content)
+            ? msg.content.filter((c: any) => c.type === 'text').map((c: any) => c.text).join('')
+            : String(msg.content ?? '');
+          logger?.tool('(result)', { id: msg.tool_use_id }, outputText);
         }
         if (message.type === 'result' && 'result' in message && message.result) {
           result = message.result;
