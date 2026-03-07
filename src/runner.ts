@@ -3,7 +3,7 @@ import { runners } from './agents/index.js';
 import { Logger } from './logger.js';
 
 function buildPrompt(template: string): string {
-  const date = new Date().toLocaleDateString('zh-CN');
+  const date = new Date().toISOString().slice(0, 10);
   return template.replace(/\{date\}/g, date);
 }
 

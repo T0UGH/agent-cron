@@ -85,6 +85,6 @@ describe('runTask', () => {
     await runTask(makeTask({ prompt: 'Today is {date}.' }));
     cap.restore();
     assert.ok(!receivedPrompt.includes('{date}'));
-    assert.match(receivedPrompt, /Today is \d{4}\/\d+\/\d+\./);
+    assert.match(receivedPrompt, /Today is \d{4}-\d{2}-\d{2}\./);
   });
 });
