@@ -15,6 +15,13 @@ cron: "0 10 * * 1"
 - 发布日期
 - 主要更新内容（简洁中文）
 
-将整理好的内容写入文件 `~/.agent-cron/output/claude-code-changelog/{date}.md`（目录不存在则创建）。
+将整理好的内容写入文件 `~/workspace/memory/claude-code-changelog/{date}.md`（目录不存在则创建）。
+
+写入完成后，在 `~/workspace/memory` 目录下执行：
+```
+git add claude-code-changelog/{date}.md
+git commit -m "chore: claude-code-changelog {date}"
+git push
+```
 
 如果找不到足够信息，输出：HEARTBEAT_OK
