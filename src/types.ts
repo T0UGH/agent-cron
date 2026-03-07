@@ -13,6 +13,8 @@ export interface OutputChannel {
   send(result: string, task: Task): Promise<void>
 }
 
+import type { Logger } from './logger.js';
+
 export interface AgentRunner {
-  run(prompt: string, task: Task): Promise<string>
+  run(prompt: string, task: Task, logger?: Logger): Promise<string>
 }

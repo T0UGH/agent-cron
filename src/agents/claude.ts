@@ -1,5 +1,6 @@
 import { query } from '@anthropic-ai/claude-agent-sdk';
 import type { AgentRunner, Task } from '../types.js';
+import type { Logger } from '../logger.js';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
@@ -33,7 +34,7 @@ function buildSkillPlugin(skillNames: string[]): string | null {
 }
 
 export class ClaudeRunner implements AgentRunner {
-  async run(prompt: string, task: Task): Promise<string> {
+  async run(prompt: string, task: Task, logger?: Logger): Promise<string> {
     const loadSkills = task.skills !== false;
     const skillNames = Array.isArray(task.skills) ? task.skills as string[] : [];
     let result = '';
@@ -60,6 +61,15 @@ export class ClaudeRunner implements AgentRunner {
       });
 
       for await (const message of q) {
+        if (message.type === 'tool_use') {
+          logger?.tool(String(message.name ?? ''), message.input);
+        }
+        if (message.type === 'tool_result') {
+          const outputText = Array.isArray(message.content)
+            ? (message.content as any[]).filter((c) => c.type === 'text').map((c) => c.text).join('')
+            : String(message.content ?? '');
+          logger?.tool('(result)', { id: message.tool_use_id }, outputText);
+        }
         if (message.type === 'result' && 'result' in message && message.result) {
           result = message.result;
         }

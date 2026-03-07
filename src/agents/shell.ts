@@ -1,4 +1,5 @@
 import type { AgentRunner, Task } from '../types.js';
+import type { Logger } from '../logger.js';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 
@@ -8,7 +9,7 @@ const execAsync = promisify(exec);
  * Shell runner - 直接执行 shell 命令或脚本
  */
 export class ShellRunner implements AgentRunner {
-  async run(prompt: string, task: Task): Promise<string> {
+  async run(prompt: string, task: Task, logger?: Logger): Promise<string> {
     // 从 prompt 中提取要执行的命令
     const bashMatch = prompt.match(/```bash\n([\s\S]+?)\n```/);
 
