@@ -73,7 +73,8 @@ describe('Logger', () => {
     const logPath = path.join(tmpHome, '.agent-cron', 'logs', 'task-tool', `${today}.log`);
     const content = fs.readFileSync(logPath, 'utf-8');
     assert.ok(content.includes('[TOOL]') && content.includes('web_search'));
-    // output truncated — should not contain 600 'a's
-    assert.ok(!content.includes('a'.repeat(501)), 'output should be truncated to 500 chars');
+    // output truncated — should preserve up to 500 chars but not more
+    assert.ok(content.includes('a'.repeat(500)), 'output should preserve up to 500 chars');
+    assert.ok(!content.includes('a'.repeat(501)), 'output should be truncated at 500 chars');
   });
 });
