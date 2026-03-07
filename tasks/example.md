@@ -1,8 +1,6 @@
 ---
 name: Example Task
 cron: "0 9 * * *"
-output: file
-outputDir: ./output
 ---
 
 Today is {date}.

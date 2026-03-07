@@ -1,7 +1,6 @@
 ---
 name: Daily AI Coding News
 cron: "0 9 * * *"
-output: file
 ---
 
 今天是 {date}。

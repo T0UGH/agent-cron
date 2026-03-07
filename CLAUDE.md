@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-agent-cron is a cron scheduler for Claude Agent SDK tasks. Each task is a `.md` file with a YAML frontmatter header (name, cron expression, output channel) and a prompt body. The scheduler runs tasks on their cron schedule and sends output to the configured channel.
+agent-cron is a cron scheduler for Claude Agent SDK tasks. Each task is a `.md` file with a YAML frontmatter header (name, cron expression) and a prompt body. The scheduler runs tasks on their cron schedule and logs output to `~/.agent-cron/logs/`.
 
 **Published as:** `@t0u9h/agent-cron` on npm
 **Repo:** https://github.com/T0UGH/agent-cron
@@ -12,8 +12,8 @@ agent-cron is a cron scheduler for Claude Agent SDK tasks. Each task is a `.md` 
 ## Architecture
 
 ```
-tasks/*.md  →  loader.ts  →  scheduler.ts  →  runner.ts  →  AgentRunner  →  OutputChannel
-                                                               agents/         outputs/
+tasks/*.md  →  loader.ts  →  scheduler.ts  →  runner.ts  →  AgentRunner  →  Logger
+                                                               agents/         ~/.agent-cron/logs/
 ```
 
 Key files:
@@ -22,15 +22,12 @@ Key files:
 |------|------|
 | `src/cli.ts` | Entry point, argument parsing, dispatches to scheduler |
 | `src/loader.ts` | Reads `tasks/*.md`, parses frontmatter via gray-matter |
-| `src/runner.ts` | Runs one task: substitutes `{date}`, calls agent, checks HEARTBEAT_OK, sends to channel |
+| `src/runner.ts` | Runs one task: substitutes `{date}`, calls agent, checks HEARTBEAT_OK, logs via Logger |
 | `src/scheduler.ts` | `startScheduler` (cron loop), `runNow`, `listTasks` |
-| `src/types.ts` | `Task`, `OutputChannel`, `AgentRunner` interfaces |
+| `src/types.ts` | `Task`, `AgentRunner` interfaces |
 | `src/agents/index.ts` | Registry: `runners` map (name → AgentRunner) |
 | `src/agents/claude.ts` | ClaudeRunner — calls `@anthropic-ai/claude-agent-sdk` |
-| `src/outputs/index.ts` | Registry: `channels` map (name → OutputChannel) |
-| `src/outputs/file.ts` | FileChannel — writes `{outputDir}/{slug}-{YYYY-MM-DD}.md` |
-| `src/outputs/feishu.ts` | FeishuChannel — Markdown → Feishu rich text POST |
-| `src/outputs/github.ts` | GithubChannel — creates/updates file via GitHub Contents API |
+| `src/logger.ts` | Logger — writes structured events to `~/.agent-cron/logs/<slug>/YYYY-MM-DD.log` |
 
 ---
 
@@ -56,37 +53,20 @@ node dist/cli.js start ./tasks
 
 ---
 
-## Adding a New Output Channel
+## Log Files
 
-1. Create `src/outputs/<name>.ts`:
+Each task run writes to `~/.agent-cron/logs/<slug>/YYYY-MM-DD.log`. Events logged:
 
-```typescript
-import type { OutputChannel } from '../types.js';
-import type { Task } from '../types.js';
+- `[START]` — task begins
+- `[TOOL]` — each agent tool call (name + input + truncated output)
+- `[END]` — task ends with status (`ok`, `heartbeat`, or `error`)
 
-export class MyChannel implements OutputChannel {
-  async send(result: string, task: Task): Promise<void> {
-    // read channel config from task fields
-    // e.g., task.myWebhook
-    // send result somewhere
-  }
-}
+Example:
 ```
-
-2. Register in `src/outputs/index.ts`:
-
-```typescript
-import { MyChannel } from './my.js';
-
-export const channels: Record<string, OutputChannel> = {
-  file:   new FileChannel(),
-  feishu: new FeishuChannel(),
-  github: new GithubChannel(),
-  my:     new MyChannel(),   // ← add here
-};
+[2026-03-07 08:00:00.123] [START] task=daily-ai-news
+[2026-03-07 08:00:01.456] [TOOL]  name=web_search input={"query":"AI news today"}
+[2026-03-07 08:00:10.000] [END]   status=ok duration=9877ms
 ```
-
-3. Add a test in `tests/` (see existing tests for pattern).
 
 ---
 
@@ -137,18 +117,15 @@ Test files:
 | `tests/loader.test.ts` | Task file parsing, frontmatter validation, slug generation |
 | `tests/runner.test.ts` | HEARTBEAT_OK handling, `{date}` substitution, agent/channel dispatch |
 | `tests/scheduler.test.ts` | listTasks output, runNow (all / by slug), exit codes |
-| `tests/feishu.test.ts` | `markdownToFeishuPost` — Markdown → Feishu block conversion |
-| `tests/file-channel.test.ts` | FileChannel — output path, directory creation |
+| `tests/logger.test.ts` | Logger — log file path, format, status, tool truncation |
 
-**Injecting fakes:** `runners` and `channels` are exported mutable objects. Override them per-test:
+**Injecting fakes:** `runners` is an exported mutable object. Override per-test:
 
 ```typescript
 import { runners } from '../src/agents/index.js';
-import { channels } from '../src/outputs/index.js';
 
 let capturedResult = '';
 runners['claude'] = { run: async (prompt) => 'some result' };
-channels['file']  = { send: async (result) => { capturedResult = result; } };
 ```
 
 ---
@@ -186,8 +163,6 @@ Requires npm token with publish access. The `files` field in `package.json` ensu
 
 ```
 ANTHROPIC_API_KEY    required — passed to Claude Agent SDK
-GITHUB_TOKEN         required for output: github
-FEISHU_WEBHOOK       required for output: feishu (unless feishuWebhook set per-task)
 ```
 
 A `.env` file in the working directory is loaded automatically via `dotenv/config` in `cli.ts`.

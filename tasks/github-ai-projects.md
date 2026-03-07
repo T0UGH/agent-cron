@@ -1,7 +1,6 @@
 ---
 name: GitHub AI Projects Discovery
 cron: "0 10 * * *"
-output: file
 ---
 
 今天是 {date}。
