@@ -1,6 +1,6 @@
 import type { Task } from './types.js';
 import { runners } from './agents/index.js';
-import { channels } from './outputs/index.js';
+import { Logger } from './logger.js';
 
 function buildPrompt(template: string): string {
   const date = new Date().toLocaleDateString('zh-CN');
@@ -8,44 +8,40 @@ function buildPrompt(template: string): string {
 }
 
 export async function runTask(task: Task): Promise<void> {
-  console.log(`[agent-cron] starting: ${task.name} (${new Date().toLocaleString('zh-CN')})`);
+  const logger = new Logger(task.slug);
+  logger.start();
 
   const agentName = String(task.agent ?? 'claude');
   const agentRunner = runners[agentName];
   if (!agentRunner) {
-    console.error(`[agent-cron] unknown agent: "${agentName}" (${task.name})`);
+    const msg = `unknown agent: "${agentName}"`;
+    console.error(`[agent-cron] ${msg} (${task.name})`);
+    logger.end('error', msg);
     return;
   }
 
   const prompt = buildPrompt(task.prompt);
-  let result = '';
 
   try {
-    result = await agentRunner.run(prompt, task);
-  } catch (err) {
+    const result = await agentRunner.run(prompt, task, logger);
+
+    if (!result) {
+      const msg = 'no result returned';
+      console.error(`[agent-cron] ${msg} (${task.name})`);
+      logger.end('error', msg);
+      return;
+    }
+
+    if (result.trim() === 'HEARTBEAT_OK') {
+      console.log(`[agent-cron] OK — no new content (${task.name})`);
+      logger.end('heartbeat');
+      return;
+    }
+
+    console.log(`[agent-cron] done: ${task.name}`);
+    logger.end('ok');
+  } catch (err: any) {
     console.error(`[agent-cron] agent error (${task.name}):`, err);
-    return;
-  }
-
-  if (!result) {
-    console.error(`[agent-cron] no result returned (${task.name})`);
-    return;
-  }
-
-  if (result.trim() === 'HEARTBEAT_OK') {
-    console.log(`[agent-cron] OK — no new content (${task.name})`);
-    return;
-  }
-
-  const channel = channels[task.output];
-  if (!channel) {
-    console.error(`[agent-cron] unknown output channel: "${task.output}" (${task.name})`);
-    return;
-  }
-
-  try {
-    await channel.send(result, task);
-  } catch (err) {
-    console.error(`[agent-cron] output error (${task.name}):`, err);
+    logger.end('error', err?.message ?? String(err));
   }
 }
