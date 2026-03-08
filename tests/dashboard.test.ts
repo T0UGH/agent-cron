@@ -51,6 +51,29 @@ describe('generateMarkdown', () => {
     assert.ok(md.includes('never'));
   });
 
+  test('shows cost column from log usage data', () => {
+    writeLog('cost-task', today,
+      `[${today} 10:00:01.000] [START] task=cost-task\n` +
+      `[${today} 10:00:11.000] [END]   status=ok duration=10000ms cost=0.0456 in=3000 out=1200\n`
+    );
+    const md = generateMarkdown(makeTasks(['cost-task']));
+    assert.ok(md.includes('Cost'), 'expected Cost column header');
+    assert.ok(md.includes('$0.0456'), 'expected cost value with $ prefix');
+  });
+
+  test('shows "-" for cost when log has no usage data', () => {
+    writeLog('no-cost-task', today,
+      `[${today} 10:00:01.000] [START] task=no-cost-task\n` +
+      `[${today} 10:00:11.000] [END]   status=ok duration=10000ms\n`
+    );
+    const md = generateMarkdown(makeTasks(['no-cost-task']));
+    assert.ok(md.includes('Cost'), 'expected Cost column header');
+    const lines = md.split('\n');
+    const row = lines.find(l => l.includes('no-cost-task'));
+    assert.ok(row, 'expected a row for no-cost-task');
+    assert.ok(row!.includes('| - |'), 'expected "-" for missing cost');
+  });
+
   test('includes 7-day history section', () => {
     writeLog('hist-task', today,
       `[${today} 10:00:01.000] [START] task=hist-task\n` +

@@ -8,7 +8,7 @@ function logsDir(): string {
 }
 
 /** Parse the last [END] line from a log file. */
-function parseLastEnd(logFile: string): { status: string; duration: string; time: string } | null {
+function parseLastEnd(logFile: string): { status: string; duration: string; time: string; cost: string | null } | null {
   let content: string;
   try {
     content = fs.readFileSync(logFile, 'utf-8');
@@ -26,6 +26,7 @@ function parseLastEnd(logFile: string): { status: string; duration: string; time
   const tsMatch = lastEnd.match(/^\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})/);
   const statusMatch = lastEnd.match(/status=(\w+)/);
   const durationMatch = lastEnd.match(/duration=(\S+)/);
+  const costMatch = lastEnd.match(/cost=(\S+)/);
 
   if (!statusMatch) return null;
 
@@ -33,6 +34,7 @@ function parseLastEnd(logFile: string): { status: string; duration: string; time
     status: statusMatch[1],
     duration: durationMatch?.[1] ?? '?',
     time: tsMatch?.[1] ?? '',
+    cost: costMatch?.[1] ?? null,
   };
 }
 
@@ -81,19 +83,19 @@ export function generateMarkdown(tasks: Task[]): string {
   lines.push('');
   lines.push(`Updated: ${updated}`);
   lines.push('');
-  lines.push('| Task | Status | Last Run | Duration |');
-  lines.push('|------|--------|----------|----------|');
+  lines.push('| Task | Status | Last Run | Duration | Cost |');
+  lines.push('|------|--------|----------|----------|------|');
 
   for (const task of tasks) {
     const latest = latestLogFile(task.slug);
     if (!latest) {
-      lines.push(`| ${task.slug} | never | - | - |`);
+      lines.push(`| ${task.slug} | never | - | - | - |`);
       continue;
     }
 
     const parsed = parseLastEnd(latest.file);
     if (!parsed) {
-      lines.push(`| ${task.slug} | running? | ${latest.date} | - |`);
+      lines.push(`| ${task.slug} | running? | ${latest.date} | - | - |`);
       continue;
     }
 
@@ -101,7 +103,8 @@ export function generateMarkdown(tasks: Task[]): string {
     const durationMs = parseInt(parsed.duration.replace('ms', ''), 10);
     const durationSec = isNaN(durationMs) ? parsed.duration : `${Math.round(durationMs / 1000)}s`;
 
-    lines.push(`| ${task.slug} | ${parsed.status} | ${hhmm} | ${durationSec} |`);
+    const costStr = parsed.cost ? `$${parsed.cost}` : '-';
+    lines.push(`| ${task.slug} | ${parsed.status} | ${hhmm} | ${durationSec} | ${costStr} |`);
   }
 
   // History (7 days)
