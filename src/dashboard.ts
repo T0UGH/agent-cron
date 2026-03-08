@@ -137,6 +137,7 @@ export function generateMarkdown(tasks: Task[]): string {
 
   const sortedDays = [...dayMap.entries()].sort((a, b) => b[0].localeCompare(a[0]));
   for (const [date, stats] of sortedDays) {
+    if (stats.ok + stats.heartbeat + stats.error === 0) continue;
     lines.push(`| ${date} | ${stats.ok} | ${stats.heartbeat} | ${stats.error} |`);
   }
 
