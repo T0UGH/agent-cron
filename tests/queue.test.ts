@@ -67,6 +67,22 @@ describe('TaskQueue', () => {
     assert.equal(runCount, 1);
   });
 
+  test('calls onEmpty callback when queue finishes', async (t) => {
+    const saved = runners['claude'];
+    t.after(() => { runners['claude'] = saved; });
+
+    let emptyCalled = 0;
+    runners['claude'] = { async run() { return 'HEARTBEAT_OK'; } };
+
+    const queue = new TaskQueue();
+    queue.onEmpty = () => { emptyCalled++; };
+    queue.enqueue(makeTask('task-a'));
+    queue.enqueue(makeTask('task-b'));
+    await queue.waitUntilEmpty();
+
+    assert.equal(emptyCalled, 1);
+  });
+
   test('getState() returns running and queued tasks', async (t) => {
     const saved = runners['claude'];
     t.after(() => { runners['claude'] = saved; });

@@ -11,6 +11,7 @@ export class TaskQueue {
   private processing: boolean = false;
   private runningSlug: string | null = null;
   private emptyResolvers: (() => void)[] = [];
+  public onEmpty: (() => void) | null = null;
 
   enqueue(task: Task): void {
     // Dedup: skip if this slug is currently running
@@ -37,6 +38,7 @@ export class TaskQueue {
     }
 
     this.processing = false;
+    this.onEmpty?.();
     // Notify waiters
     for (const resolve of this.emptyResolvers) resolve();
     this.emptyResolvers = [];
