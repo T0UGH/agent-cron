@@ -103,7 +103,7 @@ export function generateMarkdown(tasks: Task[]): string {
     const durationMs = parseInt(parsed.duration.replace('ms', ''), 10);
     const durationSec = isNaN(durationMs) ? parsed.duration : `${Math.round(durationMs / 1000)}s`;
 
-    const costStr = parsed.cost ? `$${parsed.cost}` : '-';
+    const costStr = parsed.cost ? `$${parseFloat(parsed.cost).toFixed(4)}` : '-';
     lines.push(`| ${task.slug} | ${parsed.status} | ${hhmm} | ${durationSec} | ${costStr} |`);
   }
 

@@ -58,7 +58,7 @@ describe('generateMarkdown', () => {
     );
     const md = generateMarkdown(makeTasks(['cost-task']));
     assert.ok(md.includes('Cost'), 'expected Cost column header');
-    assert.ok(md.includes('$0.0456'), 'expected cost value with $ prefix');
+    assert.ok(md.includes('$0.0456'), 'expected formatted cost value with $ prefix');
   });
 
   test('shows "-" for cost when log has no usage data', () => {
