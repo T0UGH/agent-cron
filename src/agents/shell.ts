@@ -9,7 +9,7 @@ const execAsync = promisify(exec);
  * Shell runner - 直接执行 shell 命令或脚本
  */
 export class ShellRunner implements AgentRunner {
-  async run(prompt: string, task: Task, logger?: Logger): Promise<string> {
+  async run(prompt: string, task: Task, logger?: Logger, signal?: AbortSignal): Promise<string> {
     // 从 prompt 中提取要执行的命令
     const bashMatch = prompt.match(/```bash\n([\s\S]+?)\n```/);
 
@@ -23,7 +23,7 @@ export class ShellRunner implements AgentRunner {
       const { stdout, stderr } = await execAsync(command, {
         cwd: process.cwd(),
         env: { ...process.env },
-        timeout: 120000, // 2 分钟超时
+        signal,
       });
 
       if (stderr) {
