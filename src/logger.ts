@@ -28,10 +28,16 @@ export class Logger {
     this.write(`[START] task=${this.slug}`);
   }
 
-  end(status: 'ok' | 'error' | 'heartbeat', error?: string): void {
+  end(status: 'ok' | 'error' | 'heartbeat', error?: string, usage?: { cost?: number; inputTokens?: number; outputTokens?: number }): void {
     const duration = this.startTime > 0 ? `${Date.now() - this.startTime}ms` : 'unknown';
     const errPart = error ? ` error="${error}"` : '';
-    this.write(`[END]   status=${status} duration=${duration}${errPart}`);
+    let usagePart = '';
+    if (usage) {
+      if (usage.cost !== undefined) usagePart += ` cost=${usage.cost}`;
+      if (usage.inputTokens !== undefined) usagePart += ` in=${usage.inputTokens}`;
+      if (usage.outputTokens !== undefined) usagePart += ` out=${usage.outputTokens}`;
+    }
+    this.write(`[END]   status=${status} duration=${duration}${errPart}${usagePart}`);
   }
 
   tool(name: string, input: unknown, output?: unknown): void {

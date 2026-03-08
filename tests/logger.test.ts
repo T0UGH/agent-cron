@@ -65,6 +65,28 @@ describe('Logger', () => {
     assert.ok(content.includes('status=heartbeat'));
   });
 
+  test('end logs usage fields when provided', () => {
+    const logger = new Logger('task-usage');
+    logger.start();
+    logger.end('ok', undefined, { cost: 0.0123, inputTokens: 1500, outputTokens: 800 });
+    const today = new Date().toISOString().slice(0, 10);
+    const logPath = path.join(tmpHome, '.agent-cron', 'logs', 'task-usage', `${today}.log`);
+    const content = fs.readFileSync(logPath, 'utf-8');
+    assert.ok(content.includes('cost=0.0123'), 'expected cost in END log');
+    assert.ok(content.includes('in=1500'), 'expected input tokens in END log');
+    assert.ok(content.includes('out=800'), 'expected output tokens in END log');
+  });
+
+  test('end omits usage fields when not provided', () => {
+    const logger = new Logger('task-no-usage');
+    logger.start();
+    logger.end('ok');
+    const today = new Date().toISOString().slice(0, 10);
+    const logPath = path.join(tmpHome, '.agent-cron', 'logs', 'task-no-usage', `${today}.log`);
+    const content = fs.readFileSync(logPath, 'utf-8');
+    assert.ok(!content.includes('cost='), 'should not have cost when no usage');
+  });
+
   test('tool logs name, input, output truncated to 500 chars', () => {
     const logger = new Logger('task-tool');
     logger.start();
