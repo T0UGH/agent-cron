@@ -1,5 +1,8 @@
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
 import { runners } from '../src/agents/index.js';
 import { runTask } from '../src/runner.js';
 import type { Task, AgentRunner } from '../src/types.js';
@@ -76,6 +79,26 @@ describe('runTask', () => {
     await runTask(makeTask());
     cap.restore();
     assert.ok(cap.messages.some((m) => m.includes('agent error')));
+  });
+
+  test('passes usage from RunResult to logger', async () => {
+    (runners as Record<string, AgentRunner>)['claude'] = {
+      async run() {
+        return { result: '# Content', cost: 0.05, inputTokens: 2000, outputTokens: 500 };
+      },
+    };
+    const cap = captureConsole();
+    await runTask(makeTask());
+    cap.restore();
+    assert.ok(cap.messages.some((m) => m.includes('done')));
+
+    // Verify usage was written to log
+    const today = new Date().toISOString().slice(0, 10);
+    const logPath = path.join(os.homedir(), '.agent-cron', 'logs', 'test-task', `${today}.log`);
+    const content = fs.readFileSync(logPath, 'utf-8');
+    assert.ok(content.includes('cost=0.05'), 'expected cost in log');
+    assert.ok(content.includes('in=2000'), 'expected input tokens in log');
+    assert.ok(content.includes('out=500'), 'expected output tokens in log');
   });
 
   test('substitutes {date} in prompt', async () => {
