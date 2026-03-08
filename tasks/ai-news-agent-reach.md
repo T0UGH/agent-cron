@@ -1,6 +1,6 @@
 ---
 name: AI News via Agent Reach
-cron: "0 9 * * *"
+cron: "30 23 * * *"
 skills: ["agent-reach"]
 ---
 

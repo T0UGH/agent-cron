@@ -1,6 +1,6 @@
 ---
 name: Claude Code Changelog
-cron: "0 10 * * *"
+cron: "0 0 * * *"
 ---
 
 今天是 {date}。

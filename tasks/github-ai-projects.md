@@ -1,6 +1,6 @@
 ---
 name: GitHub AI Projects Discovery
-cron: "5 10 * * *"
+cron: "50 23 * * *"
 ---
 
 今天是 {date}。
