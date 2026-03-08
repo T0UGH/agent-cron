@@ -25,5 +25,32 @@ skills: ["agent-reach"]
 ## 💬 社区声音
 - [有价值的观点，去掉转推噪音]
 
-最后，将以上内容写入文件 `/Users/haha/workspace/github/agent-cron/output/ai-news-agent-reach-{date}.md`。
-注意：文件名中的日期已经是 YYYY-MM-DD 格式（如 2026-03-07），直接使用，不要重新计算或修改格式。
+最后，执行以下步骤：
+
+### 1. 写入 memory
+
+将以上内容写入文件 `~/workspace/memory/ai-news/{date}.md`（目录不存在则创建）。
+
+在 `~/workspace/memory` 目录下执行：
+```
+git add ai-news/{date}.md
+git commit -m "chore: ai-news {date}"
+git push
+```
+
+### 2. 发飞书通知
+
+用以下命令发送飞书通知（FEISHU_WEBHOOK 已在环境变量中）：
+
+```bash
+curl -X POST "$FEISHU_WEBHOOK" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "msg_type": "text",
+    "content": {
+      "text": "📰 AI 日报 {date}\n<3-5 条最值得关注的摘要，每条一行，控制在 200 字以内>\n\n详情：https://github.com/T0UGH/macmini-memory/blob/main/ai-news/{date}.md"
+    }
+  }'
+```
+
+将 text 中的摘要替换为实际内容。
