@@ -18,5 +18,5 @@ export interface RunResult {
 }
 
 export interface AgentRunner {
-  run(prompt: string, task: Task, logger?: Logger): Promise<string | RunResult>
+  run(prompt: string, task: Task, logger?: Logger, signal?: AbortSignal): Promise<string | RunResult>
 }
