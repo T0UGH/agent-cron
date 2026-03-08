@@ -34,7 +34,7 @@ function buildSkillPlugin(skillNames: string[]): string | null {
 }
 
 export class ClaudeRunner implements AgentRunner {
-  async run(prompt: string, task: Task, logger?: Logger): Promise<RunResult> {
+  async run(prompt: string, task: Task, logger?: Logger, signal?: AbortSignal): Promise<RunResult> {
     const loadSkills = task.skills !== false;
     const skillNames = Array.isArray(task.skills) ? task.skills as string[] : [];
     let result = '';
@@ -53,11 +53,17 @@ export class ClaudeRunner implements AgentRunner {
     }
 
     try {
+      const sdkAbortController = new AbortController();
+      if (signal) {
+        signal.addEventListener('abort', () => sdkAbortController.abort(), { once: true });
+      }
+
       const q = query({
         prompt,
         options: {
           cwd: process.cwd(),
           permissionMode: 'bypassPermissions',  // 允许所有工具，包括 WebSearch
+          abortController: sdkAbortController,
           ...(loadSkills && skillNames.length === 0 ? { settingSources: ['user'] } : {}),
           ...(plugins.length > 0 ? { plugins } : {}),
         },
