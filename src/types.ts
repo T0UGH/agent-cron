@@ -10,6 +10,13 @@ export interface Task {
   [key: string]: unknown
 }
 
+export interface RunResult {
+  result: string;
+  cost?: number;
+  inputTokens?: number;
+  outputTokens?: number;
+}
+
 export interface AgentRunner {
-  run(prompt: string, task: Task, logger?: Logger): Promise<string>
+  run(prompt: string, task: Task, logger?: Logger): Promise<string | RunResult>
 }
