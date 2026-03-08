@@ -2,12 +2,12 @@
 
 > 中文文档：[README.zh.md](./README.zh.md)
 
-Run Claude Agent SDK tasks on a cron schedule. Tasks are plain `.md` files — write a prompt, set a cron expression, pick an output channel. That's it.
+Run Claude Agent SDK tasks on a cron schedule. Tasks are plain `.md` files — write a prompt, set a cron expression. That's it.
 
 ```
 tasks/
-  daily-ai-news.md    ← runs at 9am, sends to Feishu
-  weekly-report.md    ← runs Monday 8am, writes to GitHub
+  daily-ai-news.md          ← runs at 9am daily
+  claude-code-changelog.md  ← runs at 10am daily, sends Feishu notification
 ```
 
 ## Install
@@ -32,8 +32,6 @@ Once installed:
 - "立即运行 daily-ai-news"
 - "帮我配置 agent-cron 开机自启"
 
-The skill automatically configures macOS auto-start (launchd) when you create your first task.
-
 ## Quick Start
 
 **1. Create a task file**
@@ -44,8 +42,6 @@ cat > tasks/daily-news.md << 'EOF'
 ---
 name: Daily AI News
 cron: "0 9 * * *"
-output: file
-outputDir: ./output
 ---
 
 Today is {date}. Search for the latest AI coding news and summarize in 5 bullet points.
@@ -57,8 +53,7 @@ EOF
 **2. Set your API key**
 
 ```bash
-cp .env.example .env
-# edit .env and set ANTHROPIC_API_KEY
+export ANTHROPIC_API_KEY=sk-ant-...
 ```
 
 **3. Run once to test**
@@ -81,9 +76,39 @@ agent-cron start ./my-tasks   # use a different tasks directory
 agent-cron run                # run all tasks immediately (one-off)
 agent-cron run daily-news     # run one task by slug immediately
 agent-cron list               # list all registered tasks with cron expressions
+agent-cron status             # show last run status for all tasks
+agent-cron logs <slug>        # show today's log for a task
+agent-cron logs <slug> <date> # show log for a specific date (YYYY-MM-DD)
 ```
 
-`start` is a long-running process. Use launchd (macOS), systemd (Linux), or pm2 to keep it running.
+`start` is a long-running process. Use [launchd](#auto-start-on-macos) (macOS), systemd (Linux), or pm2 to keep it running.
+
+### status
+
+Shows a quick overview of all task runs:
+
+```
+$ agent-cron status
+
+TASK                       LAST RUN       STATUS      DURATION
+--------------------------------------------------------------
+claude-code-changelog      今天 10:00     heartbeat   12s
+daily-ai-news              今天 09:00     ok          45s
+github-ai-projects         今天 10:00     error ⚠     3s
+                                          ↳ Claude Code process exited with code 1
+```
+
+### logs
+
+Prints the structured log for a task. Falls back to the most recent log if today has none.
+
+```
+$ agent-cron logs daily-ai-news
+
+[2026-03-07 09:00:01.123] [START] task=daily-ai-news
+[2026-03-07 09:00:03.456] [TOOL]  name=web_search input={"query":"AI coding news"}
+[2026-03-07 09:00:10.000] [END]   status=ok duration=8877ms
+```
 
 ## Task File Format
 
@@ -93,8 +118,8 @@ Each task is a `.md` file in your tasks directory:
 ---
 name: Daily AI News          # display name (default: filename slug)
 cron: "0 9 * * *"            # cron expression (Asia/Shanghai timezone)
-output: feishu               # output channel: file | feishu | github
-feishuWebhook: https://...   # channel-specific config (see below)
+agent: claude                # agent runner (default: claude)
+skills: true                 # load ~/.claude/ skills (set false to isolate)
 ---
 
 Today is {date}. Search for the latest AI news...
@@ -108,58 +133,54 @@ If nothing to report, output exactly: HEARTBEAT_OK
 |-------|----------|---------|-------|
 | `name` | no | filename slug | display name |
 | `cron` | **yes** | — | standard 5-field cron expression |
-| `output` | **yes** | — | `file`, `feishu`, or `github` |
-| `agent` | no | `claude` | agent runner (currently only `claude`) |
-| `skills` | no | `true` | load `~/.claude/` skills (set `false` to isolate) |
-
-### Output channel fields
-
-**`output: file`**
-
-| Field | Required | Default |
-|-------|----------|---------|
-| `outputDir` | no | `./output` |
-
-Writes `{outputDir}/{slug}-{YYYY-MM-DD}.md`.
-
-**`output: feishu`**
-
-| Field | Required | Default |
-|-------|----------|---------|
-| `feishuWebhook` | no | `FEISHU_WEBHOOK` env |
-
-Converts Markdown to Feishu rich text (post format). h1 becomes the card title.
-
-**`output: github`**
-
-| Field | Required | Default |
-|-------|----------|---------|
-| `githubRepo` | **yes** | — |
-| `githubBranch` | no | `main` |
-| `githubDir` | no | repo root |
-| `githubToken` | no | `GITHUB_TOKEN` env |
-
-Creates/updates `{githubDir}/{slug}-{YYYY-MM-DD}.md` via GitHub Contents API. No local git needed.
+| `agent` | no | `claude` | agent runner (`claude` or `shell`) |
+| `skills` | no | `true` | load `~/.claude/` skills, or `["skill-name"]` for specific ones |
 
 ### Template variables
 
 | Variable | Value |
 |----------|-------|
-| `{date}` | today's date, locale `zh-CN` (e.g. `2026/3/3`) |
+| `{date}` | today's date in `YYYY-MM-DD` format (e.g. `2026-03-07`) |
+
+### Prompt-driven output
+
+There is no built-in output channel system. Instead, write the output logic directly in your prompt — Claude will execute it. This is more flexible than any abstraction:
+
+````markdown
+---
+name: Claude Code Changelog
+cron: "0 10 * * *"
+---
+
+Search for Claude Code release notes...
+
+If new version found:
+
+1. Write summary to `~/workspace/memory/changelog/{date}.md`
+2. Git commit and push
+3. Send Feishu notification:
+```bash
+curl -X POST "$FEISHU_WEBHOOK" \
+  -H "Content-Type: application/json" \
+  -d '{"msg_type":"text","content":{"text":"New version found!"}}'
+```
+
+If nothing new, output: HEARTBEAT_OK
+````
 
 ### HEARTBEAT_OK protocol
 
-If the agent returns exactly `HEARTBEAT_OK` (trimmed), the output step is skipped silently. Use this when a task should only push when there is genuinely new content:
-
-```
-If nothing new to report, output exactly: HEARTBEAT_OK
-```
+If the agent returns exactly `HEARTBEAT_OK` (trimmed), the task is considered a no-op — logged as `heartbeat` status. Use this when a task should only act when there is genuinely new content.
 
 ## Local Skills
 
-By default, all tasks load your locally installed Claude Code skills (`~/.claude/plugins/`, `~/.claude/skills/`) via `settingSources: ['user']`. This means any skill installed on your machine is available inside the agent's session.
+By default, all tasks load your locally installed Claude Code skills (`~/.claude/plugins/`, `~/.claude/skills/`). To load specific skills only:
 
-To disable for a specific task (isolation, security):
+```yaml
+skills: ["agent-reach", "my-skill"]
+```
+
+To disable for a specific task (isolation):
 
 ```yaml
 skills: false
@@ -169,22 +190,41 @@ skills: false
 
 ```
 ANTHROPIC_API_KEY=      # required
-GITHUB_TOKEN=           # required for output: github (unless set per-task)
-FEISHU_WEBHOOK=         # required for output: feishu (unless set per-task)
 ```
 
-Copy `.env.example` to `.env`. A `.env` file in the current working directory is loaded automatically at startup.
+A `.env` file in the current working directory is loaded automatically at startup.
 
 ## Timezone
 
-All cron expressions run in `Asia/Shanghai` timezone. This is hardcoded in v0.1.
+All cron expressions run in `Asia/Shanghai` timezone.
+
+## Logging
+
+Each task run writes structured events to `~/.agent-cron/logs/<slug>/YYYY-MM-DD.log`:
+
+- `[START]` — task begins
+- `[TOOL]` — each agent tool call (name, input, truncated output)
+- `[END]` — task ends with status (`ok`, `heartbeat`, or `error`) and duration
+
+Use `agent-cron status` and `agent-cron logs <slug>` to inspect.
 
 ## Auto-start on macOS
 
-To run `agent-cron start` as a background service that survives reboots:
+Create a shell wrapper that loads your environment:
 
 ```bash
-# Create LaunchAgent plist
+cat > /path/to/agent-cron/start.sh << 'EOF'
+#!/bin/zsh
+source ~/.zshrc 2>/dev/null
+exec node /path/to/agent-cron/node_modules/.bin/tsx \
+  /path/to/agent-cron/src/cli.ts start /path/to/tasks
+EOF
+chmod +x /path/to/agent-cron/start.sh
+```
+
+Then create the LaunchAgent:
+
+```bash
 cat > ~/Library/LaunchAgents/com.agent-cron.plist << 'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -193,16 +233,10 @@ cat > ~/Library/LaunchAgents/com.agent-cron.plist << 'EOF'
   <key>Label</key><string>com.agent-cron</string>
   <key>ProgramArguments</key>
   <array>
-    <string>/usr/local/bin/npx</string>
-    <string>@t0u9h/agent-cron</string>
-    <string>start</string>
-    <string>/path/to/your/tasks</string>
+    <string>/bin/zsh</string>
+    <string>/path/to/agent-cron/start.sh</string>
   </array>
-  <key>EnvironmentVariables</key>
-  <dict>
-    <key>ANTHROPIC_API_KEY</key><string>sk-ant-...</string>
-  </dict>
-  <key>WorkingDirectory</key><string>/path/to/your/project</string>
+  <key>WorkingDirectory</key><string>/path/to/agent-cron</string>
   <key>RunAtLoad</key><true/>
   <key>KeepAlive</key><true/>
   <key>StandardOutPath</key><string>/tmp/agent-cron.log</string>
@@ -211,35 +245,29 @@ cat > ~/Library/LaunchAgents/com.agent-cron.plist << 'EOF'
 </plist>
 EOF
 
-# Load immediately (no reboot required)
+# Load immediately
 launchctl load ~/Library/LaunchAgents/com.agent-cron.plist
 
-# Verify running
+# Verify
 launchctl list | grep agent-cron
 ```
+
+The shell wrapper (`start.sh`) ensures environment variables like `ANTHROPIC_API_KEY` are available — launchd does not inherit your shell environment.
 
 Or use the Claude Code skill — it handles all of this automatically.
 
 ## Architecture
 
 ```
-tasks/*.md          →  loader.ts  →  runner.ts  →  AgentRunner  →  OutputChannel
-                                                      (claude)      (file/feishu/github)
-```
-
-**Pluggable output channels** — implement `OutputChannel` and register in `src/outputs/index.ts`:
-
-```typescript
-interface OutputChannel {
-  send(result: string, task: Task): Promise<void>
-}
+tasks/*.md  →  loader.ts  →  scheduler.ts  →  runner.ts  →  AgentRunner  →  Logger
+                                                               agents/       ~/.agent-cron/logs/
 ```
 
 **Pluggable agent runners** — implement `AgentRunner` and register in `src/agents/index.ts`:
 
 ```typescript
 interface AgentRunner {
-  run(prompt: string, task: Task): Promise<string>
+  run(prompt: string, task: Task, logger?: Logger): Promise<string>
 }
 ```
 
@@ -249,6 +277,6 @@ interface AgentRunner {
 git clone https://github.com/T0UGH/agent-cron
 cd agent-cron
 npm install
-npm test           # run tests (39 tests, node:test)
+npm test           # run tests (node:test)
 npm run build      # compile TypeScript → dist/
 ```
