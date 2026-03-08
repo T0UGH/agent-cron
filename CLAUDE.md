@@ -12,8 +12,8 @@ agent-cron is a cron scheduler for Claude Agent SDK tasks. Each task is a `.md` 
 ## Architecture
 
 ```
-tasks/*.md  →  loader.ts  →  scheduler.ts  →  runner.ts  →  AgentRunner  →  Logger
-                                                               agents/         ~/.agent-cron/logs/
+tasks/*.md  →  loader.ts  →  scheduler.ts  →  queue.ts  →  runner.ts  →  AgentRunner  →  Logger
+                                                (serial)                     agents/       ~/.agent-cron/logs/
 ```
 
 Key files:
@@ -22,6 +22,7 @@ Key files:
 |------|------|
 | `src/cli.ts` | Entry point, argument parsing, dispatches to scheduler |
 | `src/loader.ts` | Reads `tasks/*.md`, parses frontmatter via gray-matter |
+| `src/queue.ts` | TaskQueue — serial execution, dedup, observable state |
 | `src/runner.ts` | Runs one task: substitutes `{date}`, calls agent, checks HEARTBEAT_OK, logs via Logger |
 | `src/scheduler.ts` | `startScheduler` (cron loop), `runNow`, `listTasks` |
 | `src/types.ts` | `Task`, `AgentRunner` interfaces |

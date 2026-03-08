@@ -85,17 +85,16 @@ agent-cron logs <slug> <date> # show log for a specific date (YYYY-MM-DD)
 
 ### status
 
-Shows a quick overview of all task runs:
+Shows a quick overview of all task runs, including live queue state:
 
 ```
 $ agent-cron status
 
 TASK                       LAST RUN       STATUS      DURATION
 --------------------------------------------------------------
-claude-code-changelog      今天 10:00     heartbeat   12s
-daily-ai-news              今天 09:00     ok          45s
-github-ai-projects         今天 10:00     error ⚠     3s
-                                          ↳ Claude Code process exited with code 1
+ai-news-agent-reach        → running      -           -
+github-ai-projects         → queued (#1)  -           -
+claude-code-changelog      今天 00:00     ok          45s
 ```
 
 ### logs
@@ -109,6 +108,14 @@ $ agent-cron logs daily-ai-news
 [2026-03-07 09:00:03.456] [TOOL]  name=web_search input={"query":"AI coding news"}
 [2026-03-07 09:00:10.000] [END]   status=ok duration=8877ms
 ```
+
+## Task Queue
+
+Tasks triggered at the same cron time are executed **serially** in filename (slug) order — not concurrently. This prevents silent failures from parallel execution.
+
+- If the same task is already running or queued, duplicate triggers are skipped
+- `agent-cron status` shows `→ running` and `→ queued (#N)` for live queue state
+- `agent-cron run` bypasses the queue and runs tasks directly (for manual one-off use)
 
 ## Task File Format
 
@@ -259,8 +266,8 @@ Or use the Claude Code skill — it handles all of this automatically.
 ## Architecture
 
 ```
-tasks/*.md  →  loader.ts  →  scheduler.ts  →  runner.ts  →  AgentRunner  →  Logger
-                                                               agents/       ~/.agent-cron/logs/
+tasks/*.md  →  loader.ts  →  scheduler.ts  →  queue.ts  →  runner.ts  →  AgentRunner  →  Logger
+                                                (serial)                     agents/       ~/.agent-cron/logs/
 ```
 
 **Pluggable agent runners** — implement `AgentRunner` and register in `src/agents/index.ts`:
