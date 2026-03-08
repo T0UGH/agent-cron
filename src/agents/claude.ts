@@ -1,5 +1,5 @@
 import { query } from '@anthropic-ai/claude-agent-sdk';
-import type { AgentRunner, Task } from '../types.js';
+import type { AgentRunner, Task, RunResult } from '../types.js';
 import type { Logger } from '../logger.js';
 import fs from 'fs';
 import path from 'path';
@@ -34,10 +34,13 @@ function buildSkillPlugin(skillNames: string[]): string | null {
 }
 
 export class ClaudeRunner implements AgentRunner {
-  async run(prompt: string, task: Task, logger?: Logger): Promise<string> {
+  async run(prompt: string, task: Task, logger?: Logger): Promise<RunResult> {
     const loadSkills = task.skills !== false;
     const skillNames = Array.isArray(task.skills) ? task.skills as string[] : [];
     let result = '';
+    let cost: number | undefined;
+    let inputTokens: number | undefined;
+    let outputTokens: number | undefined;
     let tmpPluginDir: string | null = null;
 
     const plugins: { type: 'local'; path: string }[] = [];
@@ -71,8 +74,17 @@ export class ClaudeRunner implements AgentRunner {
             : String(msg.content ?? '');
           logger?.tool('(result)', { id: msg.tool_use_id }, outputText);
         }
-        if (message.type === 'result' && 'result' in message && message.result) {
-          result = message.result;
+        if (message.type === 'result') {
+          if ('result' in message && message.result) {
+            result = message.result;
+          }
+          if ('total_cost_usd' in msg) {
+            cost = msg.total_cost_usd;
+          }
+          if ('usage' in msg && msg.usage) {
+            inputTokens = msg.usage.input_tokens;
+            outputTokens = msg.usage.output_tokens;
+          }
         }
       }
     } finally {
@@ -81,6 +93,6 @@ export class ClaudeRunner implements AgentRunner {
       }
     }
 
-    return result;
+    return { result, cost, inputTokens, outputTokens };
   }
 }
