@@ -101,6 +101,51 @@ describe('runTask', () => {
     assert.ok(content.includes('out=500'), 'expected output tokens in log');
   });
 
+  test('times out and logs error when task exceeds timeout', async () => {
+    (runners as Record<string, AgentRunner>)['claude'] = {
+      async run(_prompt, _task, _logger, signal) {
+        return new Promise((resolve, reject) => {
+          const timer = setTimeout(() => resolve('done'), 60000);
+          signal?.addEventListener('abort', () => {
+            clearTimeout(timer);
+            reject(new Error('aborted'));
+          });
+        });
+      },
+    };
+    const cap = captureConsole();
+    await runTask(makeTask({ timeout: 0.01 })); // 0.01 minutes = 600ms
+    cap.restore();
+    assert.ok(cap.messages.some((m) => m.includes('timeout')));
+
+    const today = new Date().toISOString().slice(0, 10);
+    const logPath = path.join(os.homedir(), '.agent-cron', 'logs', 'test-task', `${today}.log`);
+    const content = fs.readFileSync(logPath, 'utf-8');
+    assert.ok(content.includes('status=error'), 'expected error status');
+    assert.ok(content.includes('timeout'), 'expected timeout in error message');
+  });
+
+  test('does not timeout when task completes within limit', async () => {
+    (runners as Record<string, AgentRunner>)['claude'] = {
+      async run() { return 'HEARTBEAT_OK'; },
+    };
+    const cap = captureConsole();
+    await runTask(makeTask({ timeout: 1 }));
+    cap.restore();
+    assert.ok(cap.messages.some((m) => m.includes('no new content')));
+    assert.ok(!cap.messages.some((m) => m.includes('timeout')));
+  });
+
+  test('no timeout when timeout is 0', async () => {
+    (runners as Record<string, AgentRunner>)['claude'] = {
+      async run() { return 'HEARTBEAT_OK'; },
+    };
+    const cap = captureConsole();
+    await runTask(makeTask({ timeout: 0 }));
+    cap.restore();
+    assert.ok(cap.messages.some((m) => m.includes('no new content')));
+  });
+
   test('substitutes {date} in prompt', async () => {
     let receivedPrompt = '';
     (runners as Record<string, AgentRunner>)['claude'] = { async run(prompt) { receivedPrompt = prompt; return 'HEARTBEAT_OK'; } };
