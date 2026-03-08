@@ -46,6 +46,14 @@ switch (command) {
     break;
   }
 
+  case 'dashboard': {
+    const { generateMarkdown, writeDashboard } = await import('./dashboard.js');
+    const md = generateMarkdown(tasks);
+    console.log(md);
+    writeDashboard(tasks);
+    break;
+  }
+
   default:
     console.log(`
 agent-cron — run Claude Agent SDK tasks on a cron schedule
@@ -57,6 +65,7 @@ Usage:
   agent-cron list               List all registered tasks
   agent-cron status             Show last run status for all tasks
   agent-cron logs <slug> [date] Show logs for a task (date: YYYY-MM-DD, default: today)
+  agent-cron dashboard          Generate and write dashboard.md
 
 Options:
   dir     Path to tasks directory (default: ./tasks)

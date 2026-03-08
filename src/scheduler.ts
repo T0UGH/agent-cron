@@ -2,6 +2,7 @@ import cron from 'node-cron';
 import type { Task } from './types.js';
 import { runTask } from './runner.js';
 import { TaskQueue } from './queue.js';
+import { writeDashboard } from './dashboard.js';
 
 export const taskQueue = new TaskQueue();
 
@@ -27,6 +28,8 @@ export function startScheduler(tasks: Task[]): void {
   console.log(
     `[agent-cron] scheduler running with ${tasks.length} task(s). Press Ctrl+C to stop.`
   );
+
+  taskQueue.onEmpty = () => { writeDashboard(tasks); };
 }
 
 export async function runNow(tasks: Task[], slug?: string): Promise<void> {
