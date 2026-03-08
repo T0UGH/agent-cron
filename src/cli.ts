@@ -2,7 +2,7 @@
 import 'dotenv/config';
 import path from 'path';
 import { loadTasks } from './loader.js';
-import { startScheduler, runNow, listTasks } from './scheduler.js';
+import { startScheduler, runNow, listTasks, taskQueue } from './scheduler.js';
 import { statusAll, logsFor } from './status.js';
 
 const args = process.argv.slice(2);
@@ -33,7 +33,7 @@ switch (command) {
     break;
 
   case 'status':
-    statusAll(tasks);
+    statusAll(tasks, taskQueue.getState());
     break;
 
   case 'logs': {

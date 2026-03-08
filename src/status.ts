@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import type { Task } from './types.js';
+import type { QueueState } from './queue.js';
 
 function logsDir(): string {
   return path.join(os.homedir(), '.agent-cron', 'logs');
@@ -76,7 +77,7 @@ function formatRunTime(logDate: string, time: string): string {
   return logDate === today ? `今天 ${hhmm}` : `${logDate} ${hhmm}`;
 }
 
-export function statusAll(tasks: Task[]): void {
+export function statusAll(tasks: Task[], queueState?: QueueState): void {
   const COL = { slug: 26, run: 14, status: 11, dur: 10 };
 
   const header =
@@ -88,6 +89,27 @@ export function statusAll(tasks: Task[]): void {
   console.log('-'.repeat(header.length + 8));
 
   for (const task of tasks) {
+    if (queueState?.running === task.slug) {
+      console.log(
+        task.slug.padEnd(COL.slug) +
+        '-'.padEnd(COL.run) +
+        '→ running'.padEnd(COL.status) +
+        '-'
+      );
+      continue;
+    }
+
+    const queuedIndex = queueState?.queued.indexOf(task.slug) ?? -1;
+    if (queuedIndex >= 0) {
+      console.log(
+        task.slug.padEnd(COL.slug) +
+        '-'.padEnd(COL.run) +
+        `→ queued (#${queuedIndex + 1})`.padEnd(COL.status) +
+        '-'
+      );
+      continue;
+    }
+
     const latest = latestLogFile(task.slug);
     if (!latest) {
       console.log(

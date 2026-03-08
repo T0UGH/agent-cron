@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
+import type { QueueState } from '../src/queue.js';
 
 const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-cron-status-test-'));
 const origHome = os.homedir;
@@ -92,5 +93,22 @@ describe('logsFor', () => {
     logsFor('old-task');  // no date arg → today → not found → fallback
     cap.restore();
     assert.ok(cap.lines.join('\n').includes('[START]'));
+  });
+});
+
+describe('statusAll with queue state', () => {
+  test('shows running and queued tasks', () => {
+    const mockState: QueueState = {
+      running: 'task-a',
+      queued: ['task-b'],
+    };
+
+    const cap = captureConsole();
+    statusAll(makeTasks(['task-a', 'task-b']), mockState);
+    cap.restore();
+
+    const all = cap.lines.join('\n');
+    assert.ok(all.includes('running'), 'expected "running" in output');
+    assert.ok(all.includes('queued'), 'expected "queued" in output');
   });
 });

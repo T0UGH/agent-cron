@@ -1,6 +1,9 @@
 import cron from 'node-cron';
 import type { Task } from './types.js';
 import { runTask } from './runner.js';
+import { TaskQueue } from './queue.js';
+
+export const taskQueue = new TaskQueue();
 
 const TIMEZONE = 'Asia/Shanghai';
 
@@ -17,7 +20,7 @@ export function startScheduler(tasks: Task[]): void {
       );
       continue;
     }
-    cron.schedule(task.cron, () => { void runTask(task); }, { timezone: TIMEZONE });
+    cron.schedule(task.cron, () => { taskQueue.enqueue(task); }, { timezone: TIMEZONE });
     console.log(`[agent-cron] scheduled: ${task.name} → ${task.cron} (${TIMEZONE})`);
   }
 
